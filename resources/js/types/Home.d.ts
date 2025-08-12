@@ -1,3 +1,12 @@
+export interface SpherePreview {
+  id: number;
+  name: string;
+  description?: string;
+  image?: string;
+  category?: string;
+  virtualTourName?: string;
+  virtualTourId: number;
+}
 export interface Hero {
     title: string;
     subtitle: string;
@@ -26,5 +35,5 @@ export interface Hero {
   export interface HomeProps {
     hero: Hero;
     articles: ArticlePreview[];
-    virtualTours: VirtualTourPreview[];
+    spheres: SpherePreview[];
   }

@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\Category;
+use App\Models\Sphere;
 use App\Models\VirtualTour;
 use Illuminate\Container\Attributes\Tag;
 use Inertia\Inertia;
@@ -13,11 +14,11 @@ class HomeController extends Controller
     public function index()
     {
         $hero = [
-            'title'    => 'Welcome to Our Platform',
+            'title' => 'Welcome to Our Platform',
             'subtitle' => 'Explore articles and immersive virtual tours',
-            'cta'      => [
+            'cta' => [
                 'label' => 'Get Started',
-                'link'  => '/#sections',
+                'link' => '/#sections',
             ],
         ];
 
@@ -26,12 +27,12 @@ class HomeController extends Controller
             ->take(5)
             ->get()
             ->map(fn($a) => [
-                'id'         => $a->id,
-                'title'      => $a->title,
-                'slug'       => $a->slug,
-                'excerpt'    => Str::limit(strip_tags($a->content), 100),
-                'category'   => $a->category->name,
-                'tags'       => is_array($a->tags) ? $a->tags : (json_decode($a->tags, true) ?? []),
+                'id' => $a->id,
+                'title' => $a->title,
+                'slug' => $a->slug,
+                'excerpt' => Str::limit(strip_tags($a->content), 100),
+                'category' => $a->category->name,
+                'tags' => is_array($a->tags) ? $a->tags : (json_decode($a->tags, true) ?? []),
                 'coverImage' => $a->getFirstMediaUrl('cover') ?: null,
             ]);
 
@@ -45,18 +46,32 @@ class HomeController extends Controller
             ->get();
 
         $virtualTours = $tours->map(fn($vt) => [
-            'id'           => $vt->id,
-            'name'         => $vt->name,
-            'description'  => Str::limit($vt->description, 120),
-            'category'     => $vt->category->name,
+            'id' => $vt->id,
+            'name' => $vt->name,
+            'description' => Str::limit($vt->description, 120),
+            'category' => $vt->category->name,
             'previewImage' => optional($vt->spheres->first())->getFirstMediaUrl('sphere_image') ?: null,
-            'sphereCount'  => $vt->spheres_count,
+            'sphereCount' => $vt->spheres_count,
         ]);
 
+        $spheres = Sphere::with(['virtualTour', 'media'])
+            ->latest('created_at')
+            ->take(6)
+            ->get()
+            ->map(fn($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'description' => $s->description,
+                'image' => $s->getFirstMediaUrl('sphere_file') ?: null,
+                'category' => optional($s->category)->name,
+                'virtualTourName' => optional($s->virtualTour)->name,
+                'virtualTourId' => optional($s->virtualTour)->id,
+            ]);
         return Inertia::render('Home', [
-            'hero'         => $hero,
-            'articles'     => $articles,
+            'hero' => $hero,
+            'articles' => $articles,
             'virtualTours' => $virtualTours,
+            'spheres' => $spheres,
         ]);
     }
 
@@ -66,12 +81,12 @@ class HomeController extends Controller
 
         return Inertia::render('Home/Articles/Show', [
             'article' => [
-                'id'       => $article->id,
-                'title'    => $article->title,
-                'content'  => $article->content,
+                'id' => $article->id,
+                'title' => $article->title,
+                'content' => $article->content,
                 'category' => $article->category->name,
-                'tags'     => $article->tags,
-                'media'    => $article->getFirstMediaUrl('cover') ?: null, // GANTI 'default' JADI 'cover'
+                'tags' => $article->tags,
+                'media' => $article->getFirstMediaUrl('cover') ?: null, // GANTI 'default' JADI 'cover'
             ],
         ]);
     }
@@ -109,24 +124,40 @@ class HomeController extends Controller
         $categories = Category::where('type', 'virtual tour')->get(['id', 'name']);
 
         $virtualTours = $tours->map(fn($vt) => [
-            'id'           => $vt->id,
-            'name'         => $vt->name,
-            'description'  => Str::limit($vt->description, 120),
-            'category'     => $vt->category->name,
+            'id' => $vt->id,
+            'name' => $vt->name,
+            'description' => Str::limit($vt->description, 120),
+            'category' => $vt->category->name,
             'categoryName' => $vt->category->name,
             'previewImage' => optional($vt->spheres->first())->getFirstMediaUrl('sphere_image') ?: null,
-            'sphereCount'  => $vt->spheres_count,
+            'sphereCount' => $vt->spheres_count,
         ]);
 
+        // Ambil semua spheres untuk halaman All
+        $spheres = Sphere::with(['virtualTour', 'media'])
+            ->latest('created_at')
+            ->paginate(12);
+
+        $sphereList = $spheres->getCollection()->map(fn($s) => [
+            'id' => $s->id,
+            'name' => $s->name,
+            'description' => $s->description,
+            'image' => $s->getFirstMediaUrl('sphere_file') ?: null,
+            'category' => optional($s->category)->name,
+            'virtualTourName' => optional($s->virtualTour)->name,
+            'virtualTourId' => optional($s->virtualTour)->id,
+        ])->values();
+
         return Inertia::render('Home/Tours/All', [
-            'virtualTours'   => $virtualTours,
-            'categories'     => $categories,
+            'virtualTours' => $virtualTours,
+            'spheres' => $sphereList,
+            'categories' => $categories,
             'activeCategory' => $category,
-            'pagination'     => [
-                'current_page' => $tours->currentPage(),
-                'last_page'    => $tours->lastPage(),
-                'per_page'     => $tours->perPage(),
-                'total'        => $tours->total(),
+            'pagination' => [
+                'current_page' => $spheres->currentPage(),
+                'last_page' => $spheres->lastPage(),
+                'per_page' => $spheres->perPage(),
+                'total' => $spheres->total(),
             ],
         ]);
     }
@@ -145,24 +176,24 @@ class HomeController extends Controller
         $categories = Category::where('type', 'article')->get(['id', 'name']);
 
         $articleList = $articles->map(fn($a) => [
-            'id'         => $a->id,
-            'title'      => $a->title,
-            'slug'       => $a->slug,
-            'tags'       => is_array($a->tags) ? $a->tags : (json_decode($a->tags, true) ?? []),
-            'excerpt'    => Str::limit(strip_tags($a->content), 100),
-            'category'   => $a->category->name,
+            'id' => $a->id,
+            'title' => $a->title,
+            'slug' => $a->slug,
+            'tags' => is_array($a->tags) ? $a->tags : (json_decode($a->tags, true) ?? []),
+            'excerpt' => Str::limit(strip_tags($a->content), 100),
+            'category' => $a->category->name,
             'coverImage' => $a->getFirstMediaUrl('cover') ?: null,
         ]);
 
         return Inertia::render('Home/Articles/All', [
-            'articles'       => $articleList,
-            'categories'     => $categories,
+            'articles' => $articleList,
+            'categories' => $categories,
             'activeCategory' => $category,
-            'pagination'     => [
+            'pagination' => [
                 'current_page' => $articles->currentPage(),
-                'last_page'    => $articles->lastPage(),
-                'per_page'     => $articles->perPage(),
-                'total'        => $articles->total(),
+                'last_page' => $articles->lastPage(),
+                'per_page' => $articles->perPage(),
+                'total' => $articles->total(),
             ],
         ]);
     }
