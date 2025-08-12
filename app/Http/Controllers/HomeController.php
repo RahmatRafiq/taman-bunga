@@ -56,7 +56,7 @@ class HomeController extends Controller
 
         $spheres = Sphere::with(['virtualTour', 'media'])
             ->latest('created_at')
-            ->take(12)
+            ->take(6)
             ->get()
             ->map(fn($s) => [
                 'id' => $s->id,
