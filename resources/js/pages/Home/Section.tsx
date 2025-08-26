@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react'
 import React from 'react'
-import { BookOpen, Camera, Globe, Star } from 'lucide-react'
+import { BookOpen, Camera, Star } from 'lucide-react'
 
 interface Props {
   title: string

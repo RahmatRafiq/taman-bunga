@@ -43,15 +43,7 @@ export default function Show({ tour }: TourShowProps) {
     }
   }
 
-  // Check if tour has valid media
-  const hasValidMedia = tour.spheres.some(sphere => 
-    Boolean(
-      sphere.media?.find(m => m.mime_type?.startsWith('image/'))?.original_url ||
-      sphere.media?.[0]?.original_url ||
-      sphere.sphere_file ||
-      sphere.sphere_image
-    )
-  )
+ 
 
   // Jika tidak ada sphere
   if (!tour.spheres || tour.spheres.length === 0) {
